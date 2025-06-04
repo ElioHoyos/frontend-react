@@ -11,3 +11,29 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Estilos para SweetAlert2 */
+.custom-swal-popup {
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  border: 1px solid #eaeaea;
+}
+
+.custom-swal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.swal2-success {
+  border-color: #28a745 !important;
+}
+
+.swal2-success [class^="swal2-success-line"] {
+  background-color: #28a745 !important;
+}
+
+.swal2-x-mark-line-left, 
+.swal2-x-mark-line-right {
+  background-color: #dc3545 !important;
+}
