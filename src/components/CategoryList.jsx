@@ -140,7 +140,7 @@ const CategoryList = () => {
   return (
     <div className="card shadow-sm">
       <div className="card-body">
-        <h5 className="card-title mb-4">Lista de Categorías ({totalElements} en total)</h5>
+        <h5 className="card-title mb-4">Listado de Categorías ({totalElements} en total)</h5>
         
         {/* Sección del Buscador */}
         <div className="mb-3">
