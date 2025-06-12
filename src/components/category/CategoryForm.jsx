@@ -1,27 +1,32 @@
 import React, { useState } from 'react';
-import { useCategoryContext } from '../contexts/CategoryContext';
+import { useCategoryContext } from '../../contexts/CategoryContext';
 
 const CategoryForm = () => {
   const [name, setName] = useState('');
-  const [error, setError] = useState('');
+  // El estado 'error' ahora manejará solo el mensaje de error de validación del formulario
+  const [error, setError] = useState(''); 
   const { addCategory, isAdding } = useCategoryContext();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    
+    setError(''); // Limpia el error al intentar enviar
+
     if (!name.trim()) {
-      setError('El nombre es obligatorio');
+      setError('El nombre de la categoría es obligatorio'); // Mensaje de error de validación
       return;
     }
 
     try {
       const success = await addCategory(name);
       if (success) {
-        setName('');
+        setName(''); // Limpia el campo solo si la adición fue exitosa
+        // Los mensajes de éxito/error de la API se manejan en CategoryContext
       }
     } catch (err) {
-      setError(err.message || 'Error al crear la categoría');
+      // Si hay un error del backend, se mostrará via CategoryContext.
+      // Aquí, podrías capturar un error más específico si el addCategory lanzara uno
+      // que no sea solo el 'name.trim()'
+      // Por ahora, el CategoryContext maneja los errores generales de la API
     }
   };
 
@@ -37,17 +42,25 @@ const CategoryForm = () => {
             <div className="input-group">
               <input
                 type="text"
-                className="form-control"
+                // INICIO - Mejora Visual de Errores (MEJORA DE DISEÑO)
+                className={`form-control ${error ? 'is-invalid' : ''}`} // Añade clase 'is-invalid' si hay un error
+                // FIN - Mejora Visual de Errores
                 placeholder="Ingrese el nombre de la categoría"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (error) setError(''); // Limpia el error de validación al empezar a escribir
+                }}
                 disabled={isAdding}
                 aria-label="Nombre de categoría"
+                // INICIO - Accesibilidad (MEJORA DE DISEÑO)
+                aria-describedby={error ? 'name-error-feedback' : null} // Vincula el input al mensaje de error
+                // FIN - Accesibilidad
               />
               <button 
                 className="btn btn-primary"
                 type="submit"
-                disabled={isAdding || !name.trim()}
+                disabled={isAdding || !name.trim()} // Deshabilita si está agregando o el nombre está vacío
               >
                 {isAdding ? (
                   <>
@@ -66,12 +79,14 @@ const CategoryForm = () => {
                 )}
               </button>
             </div>
+            {/* INICIO - Mensaje de Error (MEJORA DE DISEÑO) */}
             {error && (
-              <div className="text-danger mt-2">
+              <div id="name-error-feedback" className="invalid-feedback d-block"> {/* d-block para mostrar siempre */}
                 <i className="bi bi-exclamation-circle me-2"></i>
                 {error}
               </div>
             )}
+            {/* FIN - Mensaje de Error */}
           </div>
         </form>
       </div>

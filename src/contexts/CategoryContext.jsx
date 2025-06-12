@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { categoryService } from '../api/categoryService';
+import { categoryService } from '../api/category/categoryService';
 import { showSuccessAlert, showErrorAlert } from '../utils/alertHelper';
 
 const CategoryContext = createContext();
@@ -22,115 +22,112 @@ export const CategoryProvider = ({ children }) => {
   const [totalElements, setTotalElements] = useState(0);
   const [sortField, setSortField] = useState('dateCreated');
   const [sortDirection, setSortDirection] = useState('DESC');
-  // State for search term
+  
+  // State for search term (NUEVO)
   const [searchTerm, setSearchTerm] = useState(''); 
   
-  // *** NUEVO ESTADO: Clave para forzar la recarga de categorías ***
+  // NUEVO ESTADO: Clave para forzar la recarga de categorías
+  // Se usa para asegurar que fetchCategories se ejecuta cuando se necesita,
+  // como después de un toggleState o delete.
   const [refreshKey, setRefreshKey] = useState(0); 
 
-  // *** CAMBIO CRÍTICO AQUÍ: fetchCategories ahora lee del estado, no de argumentos ***
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async () => { // Eliminamos parámetros aquí, se toman de los estados
     setLoading(true);
     try {
-      // Usa directamente los estados del contexto
-      const data = await categoryService.getCategoriesPaged(currentPage, pageSize, sortField, sortDirection, searchTerm);
+      // Pasamos los estados de paginación, ordenamiento y búsqueda a la función de servicio
+      const data = await categoryService.getCategoriesPaged(
+        currentPage, 
+        pageSize, 
+        sortField, 
+        sortDirection,
+        searchTerm // <-- Añadido: Pasa el término de búsqueda
+      );
       setCategories(data.content);
-      setCurrentPage(data.number); // Asegurar que el estado de la paginación se actualice desde la respuesta
+      setCurrentPage(data.number);
+      setPageSize(data.size);
       setTotalPages(data.totalPages);
       setTotalElements(data.totalElements);
       setError(null);
     } catch (err) {
       setError(err.message);
-      setCategories([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, sortField, sortDirection, searchTerm]); // *** Dependencias de useCallback: ahora fetchCategories se recrea si estos cambian ***
+  }, [currentPage, pageSize, sortField, sortDirection, searchTerm, refreshKey]); // eslint-disable-next-line react-hooks/exhaustive-deps
 
-  // Efecto para disparar fetchCategories cuando cambian los parámetros O refreshKey
-  // Ya no incluimos `fetchCategories` en las dependencias porque se maneja su propia recreación.
+  // Carga inicial y recarga cuando cambian las dependencias de fetchCategories
   useEffect(() => {
-    fetchCategories(); // Llama a la función sin argumentos
-  }, [currentPage, pageSize, sortField, sortDirection, searchTerm, refreshKey, fetchCategories]); // *** Añadir 'fetchCategories' aquí también, ya que su `useCallback` ahora tiene dependencias, por lo que puede cambiar. ***
+    fetchCategories();
+  }, [fetchCategories]); // <-- Dependencia de fetchCategories
 
+  // Función para agregar nueva categoría
   const addCategory = async (name) => {
     setIsAdding(true);
     try {
       await categoryService.createCategory({name: name});
-      setCurrentPage(0); // Asegurar que la nueva categoría aparezca en la primera página
-      setRefreshKey(prev => prev + 1); // Forzar recarga si no hay otros cambios
       setSuccessMessage('Categoría creada exitosamente');
+      setRefreshKey(prev => prev + 1); // Forzar recarga después de añadir
       return true;
     } catch (err) {
-      setErrorMessage(err.message);
+      setErrorMessage(err.message || 'Error al crear la categoría');
       return false;
     } finally {
       setIsAdding(false);
     }
   };
 
+  // Función para actualizar categoría
   const updateCategory = async (id, name, state) => {
     setIsUpdating(true);
     try {
-      await categoryService.updateCategory({id: id, name: name, state: state});
-      setRefreshKey(prev => prev + 1); // Forzar recarga
+      await categoryService.updateCategory({id, name, state});
       setSuccessMessage('Categoría actualizada exitosamente');
+      setRefreshKey(prev => prev + 1); // Forzar recarga después de actualizar
       return true;
     } catch (err) {
-      setErrorMessage(err.message);
+      setErrorMessage(err.message || 'Error al actualizar la categoría');
       return false;
     } finally {
       setIsUpdating(false);
     }
   };
 
+  // Función para eliminar categoría
   const removeCategory = async (id) => {
     try {
       await categoryService.deleteCategory(id);
-      // Ajustar página si la última categoría de la página actual fue eliminada.
-      // Si solo queda un elemento en la página actual Y no es la primera página,
-      // retrocede una página. Si es la primera página o hay más elementos, quédate.
-      const newPage = (currentPage > 0 && categories.length === 1) ? currentPage - 1 : currentPage;
-      
-      // Actualiza la página si es necesario, esto disparará el useEffect principal.
-      // Si la página no cambia, `refreshKey` lo hará.
-      if (newPage !== currentPage) {
-        setCurrentPage(newPage);
-      } else {
-        setRefreshKey(prev => prev + 1); // Forzar recarga si la página no cambió
-      }
       setSuccessMessage('Categoría eliminada exitosamente');
+      setRefreshKey(prev => prev + 1); // Forzar recarga después de eliminar
     } catch (err) {
       setErrorMessage(err.message);
     }
   };
 
-  // *** FUNCIÓN toggleCategoryState MEJORADA (sin cambios en la lógica de toggle, solo en el efecto de recarga) ***
+  // Función corregida para cambiar estado con actualización optimista y recarga forzada
   const toggleCategoryState = async (id) => {
     try {
-      // Actualización optimista
-      setCategories(prev => prev.map(cat =>
+      // Actualización optimista: Cambia el estado en el UI inmediatamente
+      setCategories(prev => prev.map(cat => 
         cat.id === id ? {...cat, state: !cat.state} : cat
       ));
       
       await categoryService.toggleCategoryState(id);
       setSuccessMessage('Estado actualizado correctamente');
       
-      // *** Importante: Forzar una recarga INCREMENTANDO refreshKey ***
-      // Esto garantizará que el `useEffect` se dispare y `fetchCategories`
-      // se ejecute, sincronizando la UI con el backend, incluso si
-      // currentPage, pageSize, etc., no han cambiado.
+      // Importante: Forzar una recarga incrementando refreshKey
+      // Esto asegura que la tabla se refresque con los datos más recientes del backend
       setRefreshKey(prev => prev + 1); 
 
     } catch (err) {
-      // Revertir en caso de error
-      setCategories(prev => prev.map(cat =>
+      // Revertir en caso de error: Si la API falla, revertimos el cambio en el UI
+      setCategories(prev => prev.map(cat => 
         cat.id === id ? {...cat, state: !cat.state} : cat
       ));
       setErrorMessage(err.message);
     }
   };
 
+  // Efecto para mostrar alertas
   useEffect(() => {
     if (successMessage) {
       showSuccessAlert('Éxito', successMessage);
@@ -143,6 +140,7 @@ export const CategoryProvider = ({ children }) => {
     }
   }, [successMessage, errorMessage]);
 
+  // Valor que se expone a los componentes hijos
   const contextValue = {
     categories,
     loading,
@@ -155,7 +153,7 @@ export const CategoryProvider = ({ children }) => {
     totalElements,
     sortField,
     sortDirection,
-    searchTerm, 
+    searchTerm, // <-- Añadido: Exponer searchTerm
     addCategory,
     updateCategory,
     removeCategory,
@@ -164,7 +162,8 @@ export const CategoryProvider = ({ children }) => {
     setPageSize,
     setSortField,
     setSortDirection,
-    setSearchTerm, 
+    setSearchTerm, // <-- Añadido: Exponer setSearchTerm
+    // No es necesario exponer refreshKey directamente
   };
 
   return (
