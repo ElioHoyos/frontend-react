@@ -1,11 +1,8 @@
-import React, { useState, useEffect } from 'react'; // Eliminado 'useCallback'
-import { useCategoryContext } from '../../contexts/CategoryContext'; // Asegúrate de que la ruta es correcta
+import React, { useState, useEffect } from 'react';
+import { useCategoryContext } from '../../contexts/CategoryContext';
 import { FaTrash, FaEdit, FaToggleOn, FaToggleOff, FaSearch } from 'react-icons/fa';
-import CategoryEditModal from '../../components/category/CategoryEditModal'; // Asegúrate de que la ruta es correcta
-import { showConfirmDialog } from '../../utils/alertHelper'; // Asegúrate de que la ruta es correcta
-// Asegúrate de tener los iconos de Bootstrap en tu proyecto si usas las clases bi-caret-up-fill, etc.
-// Si no, puedes importarlos desde 'react-icons/bs' o usar otros.
-// Por ejemplo: import { BsCaretUpFill, BsCaretDownFill } from 'react-icons/bs';
+import CategoryEditModal from '../../components/category/CategoryEditModal';
+import { showConfirmDialog } from '../../utils/alertHelper';
 
 // Custom hook para debounce (simple y funcional)
 const useDebounce = (value, delay) => {
@@ -25,199 +22,189 @@ const useDebounce = (value, delay) => {
 };
 
 const CategoryList = () => {
-  const { 
-    categories, 
-    loading, 
-    error, 
-    removeCategory, 
-    toggleCategoryState, // Función para cambiar el estado
+  const {
+    categories,
+    loading,
+    error,
+    removeCategory,
+    toggleCategoryState,
     currentPage,
     pageSize,
     totalPages,
     totalElements,
     sortField,
     sortDirection,
-    setSearchTerm, // Setter para el searchTerm global del contexto
+    searchTerm, // Recibir searchTerm del contexto
     setCurrentPage,
     setPageSize,
     setSortField,
     setSortDirection,
+    setSearchTerm, // Recibir setSearchTerm del contexto
   } = useCategoryContext();
-  
+
   const [editingCategory, setEditingCategory] = useState(null);
-  const [localSearchTerm, setLocalSearchTerm] = useState(''); // Estado local para el input del buscador
-  const debouncedSearchTerm = useDebounce(localSearchTerm, 500); // Aplica debounce al término de búsqueda
 
-  // Efecto para actualizar el searchTerm global del contexto cuando el debouncedSearchTerm cambia
+  // Debounce para el término de búsqueda
+  const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms de retardo
+
+  // useEffect para resetear la página a 0 cuando el término de búsqueda cambia
+  // y después de que el debounce haya actuado
   useEffect(() => {
-    setSearchTerm(debouncedSearchTerm);
-    setCurrentPage(0); // Reinicia la paginación al cambiar el término de búsqueda
-  }, [debouncedSearchTerm, setSearchTerm, setCurrentPage]);
+    setCurrentPage(0);
+  }, [debouncedSearchTerm, setCurrentPage]); // Solo se ejecuta cuando debouncedSearchTerm cambia
 
-  // Función para formatear fecha
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  // Manejar eliminación de categoría
   const handleDelete = async (id, name) => {
     const result = await showConfirmDialog(
-      'Confirmar eliminación',
-      `¿Estás seguro de eliminar la categoría "${name}"? Esta acción no se puede deshacer.` // Mensaje más descriptivo
+      '¿Estás seguro?',
+      `Deseas eliminar la categoría "${name}"?`
     );
-    
     if (result.isConfirmed) {
-      try {
-        await removeCategory(id);
-      } catch (err) {
-        console.error('Error al eliminar categoría:', err);
-      }
+      removeCategory(id);
     }
   };
 
-  // Manejar ordenamiento de tabla (NUEVO)
+  const handleToggleState = async (id, name, currentState) => {
+    const action = currentState ? 'desactivar' : 'activar';
+    const result = await showConfirmDialog(
+      'Confirmar Cambio de Estado',
+      `¿Estás seguro de ${action} la categoría "${name}"?`
+    );
+    if (result.isConfirmed) {
+      toggleCategoryState(id);
+    }
+  };
+
+  // Función para manejar el cambio de ordenamiento
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortDirection(prev => prev === 'ASC' ? 'DESC' : 'ASC');
+      // Si es el mismo campo, cambia la dirección
+      setSortDirection(sortDirection === 'ASC' ? 'DESC' : 'ASC');
     } else {
+      // Si es un campo diferente, ordena por ASC por defecto
       setSortField(field);
-      setSortDirection('ASC'); // Por defecto, ordena ascendente al cambiar de campo
+      setSortDirection('ASC');
     }
-    setCurrentPage(0); // Vuelve a la primera página al cambiar el orden
+    setCurrentPage(0); // Vuelve a la primera página al cambiar el ordenamiento
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField === field) {
+      return sortDirection === 'ASC' ? (
+        <i className="bi bi-caret-up-fill ms-1"></i>
+      ) : (
+        <i className="bi bi-caret-down-fill ms-1"></i>
+      );
+    }
+    return null;
   };
 
   return (
-    <div className="card shadow-sm mb-4 border-primary">
+    <div className="card shadow-sm border-primary">
       <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h5 className="card-title mb-0">Listado de Categorías</h5>
-        {/* INICIO - Buscador Integrado (MEJORA DE DISEÑO) */}
-        <div className="input-group" style={{ maxWidth: '300px' }}>
+        {/* Input de Búsqueda */}
+        <div className="input-group w-50">
+          <span className="input-group-text">
+            <FaSearch />
+          </span>
           <input
             type="text"
             className="form-control"
             placeholder="Buscar por nombre..."
-            value={localSearchTerm}
-            onChange={(e) => setLocalSearchTerm(e.target.value)}
-            aria-label="Buscar categorías"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)} // Actualiza searchTerm
           />
-          <span className="input-group-text"><FaSearch /></span>
         </div>
-        {/* FIN - Buscador Integrado */}
       </div>
       <div className="card-body">
         {loading ? (
-          // INICIO - Estado de Carga (MEJORA DE DISEÑO)
-          <div className="text-center py-5">
+          <div className="text-center">
             <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Cargando categorías...</span>
+              <span className="visually-hidden">Cargando...</span>
             </div>
-            <p className="mt-2 text-muted">Cargando categorías...</p>
+            <p className="mt-2">Cargando categorías...</p>
           </div>
-          // FIN - Estado de Carga
         ) : error ? (
-          // INICIO - Estado de Error (MEJORA DE DISEÑO)
-          <div className="alert alert-danger text-center" role="alert">
-            <i className="bi bi-exclamation-triangle me-2"></i>
-            Error al cargar las categorías: {error}
+          <div className="alert alert-danger text-center">
+            <i className="bi bi-exclamation-circle me-2"></i>
+            {error}
           </div>
-          // FIN - Estado de Error
         ) : categories.length === 0 ? (
-          // INICIO - Estado Vacío (MEJORA DE DISEÑO)
-          <div className="text-center py-5">
-            <p className="lead text-muted">
-              <i className="bi bi-info-circle me-2"></i>
-              Aún no hay categorías registradas. ¡Empieza agregando una!
-            </p>
-            {/* Opcional: un botón para ir directamente al formulario o abrir un modal de añadir */}
-            {/* Si el formulario de agregar categoría está en otro lugar, podrías añadir un botón aquí */}
-            {/* <button className="btn btn-primary mt-3" onClick={() => {/* Lógica para abrir formulario * /}}>
-              <i className="bi bi-plus-circle me-2"></i> Agregar Nueva Categoría
-            </button> */}
+          <div className="alert alert-info text-center">
+            <i className="bi bi-info-circle me-2"></i>
+            No hay categorías registradas.
           </div>
-          // FIN - Estado Vacío
         ) : (
           <div className="table-responsive">
-            <table className="table table-hover table-striped align-middle">
-              <thead>
+            <table className="table table-hover table-striped">
+              <thead className="table-dark">
                 <tr>
-                  {/* INICIO - Indicadores de Ordenamiento (MEJORA DE DISEÑO) */}
-                  <th scope="col" onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>
-                    Nombre
-                    {sortField === 'name' && (
-                      <span>
-                        {sortDirection === 'ASC' ? <i className="bi bi-caret-up-fill ms-1"></i> : <i className="bi bi-caret-down-fill ms-1"></i>}
-                      </span>
-                    )}
+                  <th scope="col" onClick={() => handleSort('id')} style={{ cursor: 'pointer' }}>
+                    ID {getSortIcon('id')}
                   </th>
-                  <th scope="col">
-                    {/* El estado no suele ser clickeable para ordenar si es un booleano */}
-                    Estado
+                  <th scope="col" onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>
+                    Nombre {getSortIcon('name')}
+                  </th>
+                  <th scope="col" onClick={() => handleSort('state')} style={{ cursor: 'pointer' }}>
+                    Estado {getSortIcon('state')}
                   </th>
                   <th scope="col" onClick={() => handleSort('dateCreated')} style={{ cursor: 'pointer' }}>
-                    Fecha Creación
-                    {sortField === 'dateCreated' && (
-                      <span>
-                        {sortDirection === 'ASC' ? <i className="bi bi-caret-up-fill ms-1"></i> : <i className="bi bi-caret-down-fill ms-1"></i>}
-                      </span>
-                    )}
+                    Fecha Creación {getSortIcon('dateCreated')}
                   </th>
                   <th scope="col" onClick={() => handleSort('dateModified')} style={{ cursor: 'pointer' }}>
-                    Fecha Modificación
-                    {sortField === 'dateModified' && (
-                      <span>
-                        {sortDirection === 'ASC' ? <i className="bi bi-caret-up-fill ms-1"></i> : <i className="bi bi-caret-down-fill ms-1"></i>}
-                      </span>
-                    )}
+                    Última Modificación {getSortIcon('dateModified')}
                   </th>
-                  {/* FIN - Indicadores de Ordenamiento */}
                   <th scope="col">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {categories.map((category) => (
                   <tr key={category.id}>
+                    <td>{category.id}</td>
                     <td>{category.name}</td>
-                    {/* INICIO - Mejora Visual para toggleState (MEJORA DE DISEÑO) */}
                     <td>
                       <span
-                        className={`badge ${category.state ? 'bg-success' : 'bg-danger'} me-2`}
-                        style={{ fontSize: '0.85em', padding: '0.4em 0.6em' }}
+                        className={`badge ${
+                          category.state ? 'bg-success' : 'bg-danger'
+                        }`}
                       >
                         {category.state ? 'Activo' : 'Inactivo'}
                       </span>
-                      <button 
-                        className="btn btn-sm btn-outline-secondary"
-                        onClick={() => toggleCategoryState(category.id)}
-                        title={category.state ? 'Desactivar Categoría' : 'Activar Categoría'}
-                      >
-                        {category.state ? <FaToggleOn /> : <FaToggleOff />}
-                      </button>
                     </td>
-                    {/* FIN - Mejora Visual para toggleState */}
-                    <td>{formatDate(category.dateCreated)}</td>
-                    <td>{formatDate(category.dateModified)}</td>
+                    <td>{category.dateCreated}</td>
+                    <td>{category.dateModified}</td>
                     <td>
-                      <div className="btn-group">
-                        <button 
-                          className="btn btn-sm btn-outline-primary"
+                      <div className="d-flex gap-2">
+                        <button
+                          className="btn btn-sm btn-info text-white"
                           onClick={() => setEditingCategory(category)}
                           title="Editar"
                         >
-                          <FaEdit /> Editar 
+                          <FaEdit />
                         </button>
-                        {/* El botón de toggle ya está arriba junto al badge */}
-                        <button 
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDelete(category.id, category.name)}
+                        <button
+                          className={`btn btn-sm ${
+                            category.state ? 'btn-warning' : 'btn-success'
+                          }`}
+                          onClick={() =>
+                            handleToggleState(
+                              category.id,
+                              category.name,
+                              category.state
+                            )
+                          }
+                          title={category.state ? 'Desactivar' : 'Activar'}
+                        >
+                          {category.state ? <FaToggleOn /> : <FaToggleOff />}
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() =>
+                            handleDelete(category.id, category.name)
+                          }
                           title="Eliminar"
                         >
-                          <FaTrash /> Eliminar
+                          <FaTrash />
                         </button>
                       </div>
                     </td>
@@ -226,62 +213,54 @@ const CategoryList = () => {
               </tbody>
             </table>
 
-            {/* INICIO - Paginación (Mejorada con info de total) */}
-            <nav className="d-flex justify-content-between align-items-center mt-3">
-              <div>
-                <span className="text-muted">
-                  Mostrando {categories.length} de {totalElements} categorías en total
-                </span>
-                <select 
-                  className="form-select form-select-sm ms-2 d-inline-block w-auto"
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setCurrentPage(0); // Reinicia a la primera página al cambiar el tamaño
-                  }}
-                >
-                  <option value="5">5 por página</option>
-                  <option value="10">10 por página</option>
-                  <option value="25">25 por página</option>
-                </select>
-              </div>
-              <ul className="pagination pagination-sm mb-0">
-                <li className={`page-item ${currentPage === 0 ? 'disabled' : ''}`}>
-                  <button className="page-link" onClick={() => setCurrentPage(0)}>
-                    Primera
-                  </button>
-                </li>
-                <li className={`page-item ${currentPage === 0 ? 'disabled' : ''}`}>
-                  <button className="page-link" onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}>
-                    Anterior
-                  </button>
-                </li>
-                {/* Puedes añadir números de página aquí si lo deseas, o un rango */}
-                <li className="page-item active">
-                  <span className="page-link">{currentPage + 1}</span>
-                </li>
-                <li className={`page-item ${currentPage >= totalPages - 1 ? 'disabled' : ''}`}>
-                  <button className="page-link" onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}>
-                    Siguiente
-                  </button>
-                </li>
-                <li className={`page-item ${currentPage >= totalPages - 1 ? 'disabled' : ''}`}>
-                  <button className="page-link" onClick={() => setCurrentPage(totalPages - 1)}>
-                    Última
-                  </button>
-                </li>
-              </ul>
-            </nav>
+            {/* INICIO - Paginación */}
+            {totalPages > 0 && (
+              <nav aria-label="Page navigation">
+                <ul className="pagination justify-content-center">
+                  <li className={`page-item ${currentPage === 0 ? 'disabled' : ''}`}>
+                    <button className="page-link" onClick={() => setCurrentPage(0)}>
+                      Primera
+                    </button>
+                  </li>
+                  <li className={`page-item ${currentPage === 0 ? 'disabled' : ''}`}>
+                    <button className="page-link" onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}>
+                      Anterior
+                    </button>
+                  </li>
+                  {/* Mostrar números de página */}
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <li key={i} className={`page-item ${currentPage === i ? 'active' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(i)}>
+                        {i + 1}
+                      </button>
+                    </li>
+                  ))}
+                  <li className={`page-item ${currentPage >= totalPages - 1 ? 'disabled' : ''}`}>
+                    <button className="page-link" onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}>
+                      Siguiente
+                    </button>
+                  </li>
+                  <li className={`page-item ${currentPage >= totalPages - 1 ? 'disabled' : ''}`}>
+                    <button className="page-link" onClick={() => setCurrentPage(totalPages - 1)}>
+                      Última
+                    </button>
+                  </li>
+                </ul>
+                <div className="text-center mt-2">
+                  Mostrando {categories.length} de {totalElements} categorías.
+                </div>
+              </nav>
+            )}
             {/* FIN - Paginación */}
           </div>
         )}
       </div>
-      
+
       {/* Modal de edición */}
       {editingCategory && (
-        <CategoryEditModal 
-          category={editingCategory} 
-          onClose={() => setEditingCategory(null)} 
+        <CategoryEditModal
+          category={editingCategory}
+          onClose={() => setEditingCategory(null)}
         />
       )}
     </div>

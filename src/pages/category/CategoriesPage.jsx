@@ -10,7 +10,7 @@ const CategoriesPage = () => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h1 className="h3 mb-0">Gestión de Categorías</h1>
           </div>
-          
+
           <CategoryForm />
           <CategoryList />
         </div>

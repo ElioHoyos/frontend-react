@@ -22,106 +22,95 @@ export const CategoryProvider = ({ children }) => {
   const [totalElements, setTotalElements] = useState(0);
   const [sortField, setSortField] = useState('dateCreated');
   const [sortDirection, setSortDirection] = useState('DESC');
-  
+
   // State for search term (NUEVO)
-  const [searchTerm, setSearchTerm] = useState(''); 
-  
+  const [searchTerm, setSearchTerm] = useState(''); // Se mantiene para el input, pero se pasará como 'name' al servicio
+
   // NUEVO ESTADO: Clave para forzar la recarga de categorías
   // Se usa para asegurar que fetchCategories se ejecuta cuando se necesita,
-  // como después de un toggleState o delete.
-  const [refreshKey, setRefreshKey] = useState(0); 
+  // como después de un toggleState o delete
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const fetchCategories = useCallback(async () => { // Eliminamos parámetros aquí, se toman de los estados
+  const fetchCategories = useCallback(async () => {
     setLoading(true);
     try {
-      // Pasamos los estados de paginación, ordenamiento y búsqueda a la función de servicio
-      const data = await categoryService.getCategoriesPaged(
-        currentPage, 
-        pageSize, 
-        sortField, 
-        sortDirection,
-        searchTerm // <-- Añadido: Pasa el término de búsqueda
-      );
+      // Pasamos 'searchTerm' directamente como el parámetro 'name' al servicio
+      const data = await categoryService.getCategoriesPaged(currentPage, pageSize, sortField, sortDirection, searchTerm); // CAMBIADO: searchTerm se pasa como 'name'
       setCategories(data.content);
-      setCurrentPage(data.number);
-      setPageSize(data.size);
       setTotalPages(data.totalPages);
       setTotalElements(data.totalElements);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Error al cargar categorías');
+      setCategories([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, sortField, sortDirection, searchTerm, refreshKey]); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize, sortField, sortDirection, searchTerm, refreshKey]); // Añadido refreshKey a las dependencias
 
-  // Carga inicial y recarga cuando cambian las dependencias de fetchCategories
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]); // <-- Dependencia de fetchCategories
+  }, [fetchCategories]);
 
-  // Función para agregar nueva categoría
   const addCategory = async (name) => {
     setIsAdding(true);
     try {
-      await categoryService.createCategory({name: name});
-      setSuccessMessage('Categoría creada exitosamente');
-      setRefreshKey(prev => prev + 1); // Forzar recarga después de añadir
+      await categoryService.createCategory({ name, state: true });
+      setSuccessMessage('Categoría agregada exitosamente.');
+      setRefreshKey(prev => prev + 1); // Forzar recarga
       return true;
     } catch (err) {
-      setErrorMessage(err.message || 'Error al crear la categoría');
+      setErrorMessage(err.message);
       return false;
     } finally {
       setIsAdding(false);
     }
   };
 
-  // Función para actualizar categoría
   const updateCategory = async (id, name, state) => {
     setIsUpdating(true);
     try {
-      await categoryService.updateCategory({id, name, state});
-      setSuccessMessage('Categoría actualizada exitosamente');
-      setRefreshKey(prev => prev + 1); // Forzar recarga después de actualizar
+      await categoryService.updateCategory(id, name, state);
+      setSuccessMessage('Categoría actualizada exitosamente.');
+      setRefreshKey(prev => prev + 1); // Forzar recarga
       return true;
     } catch (err) {
-      setErrorMessage(err.message || 'Error al actualizar la categoría');
+      setErrorMessage(err.message);
       return false;
     } finally {
       setIsUpdating(false);
     }
   };
 
-  // Función para eliminar categoría
   const removeCategory = async (id) => {
     try {
       await categoryService.deleteCategory(id);
-      setSuccessMessage('Categoría eliminada exitosamente');
-      setRefreshKey(prev => prev + 1); // Forzar recarga después de eliminar
+      setSuccessMessage('Categoría eliminada exitosamente.');
+      setRefreshKey(prev => prev + 1); // Forzar recarga
+      // Si la página actual queda vacía después de eliminar, ir a la anterior
+      if (categories.length === 1 && currentPage > 0) {
+        setCurrentPage(prev => prev - 1);
+      }
     } catch (err) {
       setErrorMessage(err.message);
     }
   };
 
-  // Función corregida para cambiar estado con actualización optimista y recarga forzada
   const toggleCategoryState = async (id) => {
+    // Optimistic UI update
+    setCategories(prev => prev.map(cat =>
+      cat.id === id ? { ...cat, state: !cat.state } : cat
+    ));
     try {
-      // Actualización optimista: Cambia el estado en el UI inmediatamente
-      setCategories(prev => prev.map(cat => 
-        cat.id === id ? {...cat, state: !cat.state} : cat
-      ));
-      
       await categoryService.toggleCategoryState(id);
-      setSuccessMessage('Estado actualizado correctamente');
-      
-      // Importante: Forzar una recarga incrementando refreshKey
+      setSuccessMessage('Estado de categoría cambiado exitosamente.');
+      setRefreshKey(prev => prev + 1); // Forzar una recarga incrementando refreshKey
       // Esto asegura que la tabla se refresque con los datos más recientes del backend
-      setRefreshKey(prev => prev + 1); 
 
     } catch (err) {
       // Revertir en caso de error: Si la API falla, revertimos el cambio en el UI
-      setCategories(prev => prev.map(cat => 
-        cat.id === id ? {...cat, state: !cat.state} : cat
+      setCategories(prev => prev.map(cat =>
+        cat.id === id ? { ...cat, state: !cat.state } : cat
       ));
       setErrorMessage(err.message);
     }
@@ -133,7 +122,7 @@ export const CategoryProvider = ({ children }) => {
       showSuccessAlert('Éxito', successMessage);
       setSuccessMessage('');
     }
-    
+
     if (errorMessage) {
       showErrorAlert('Error', errorMessage);
       setErrorMessage('');
@@ -153,7 +142,7 @@ export const CategoryProvider = ({ children }) => {
     totalElements,
     sortField,
     sortDirection,
-    searchTerm, // <-- Añadido: Exponer searchTerm
+    searchTerm, // Se expone searchTerm para el input
     addCategory,
     updateCategory,
     removeCategory,
@@ -162,8 +151,7 @@ export const CategoryProvider = ({ children }) => {
     setPageSize,
     setSortField,
     setSortDirection,
-    setSearchTerm, // <-- Añadido: Exponer setSearchTerm
-    // No es necesario exponer refreshKey directamente
+    setSearchTerm, // NUEVO: Exponer setSearchTerm
   };
 
   return (

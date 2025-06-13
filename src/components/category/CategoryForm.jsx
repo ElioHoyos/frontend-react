@@ -3,24 +3,22 @@ import { useCategoryContext } from '../../contexts/CategoryContext';
 
 const CategoryForm = () => {
   const [name, setName] = useState('');
-  // El estado 'error' ahora manejará solo el mensaje de error de validación del formulario
-  const [error, setError] = useState(''); 
+  const [error, setError] = useState('');
   const { addCategory, isAdding } = useCategoryContext();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); // Limpia el error al intentar enviar
+    setError('');
 
     if (!name.trim()) {
-      setError('El nombre de la categoría es obligatorio'); // Mensaje de error de validación
+      setError('El nombre de la categoría es obligatorio');
       return;
     }
 
     try {
       const success = await addCategory(name);
       if (success) {
-        setName(''); // Limpia el campo solo si la adición fue exitosa
-        // Los mensajes de éxito/error de la API se manejan en CategoryContext
+        setName('');
       }
     } catch (err) {
       // Si hay un error del backend, se mostrará via CategoryContext.
@@ -33,40 +31,36 @@ const CategoryForm = () => {
   return (
     <div className="card shadow-sm mb-4 border-primary">
       <div className="card-header bg-primary text-white">
-        <h5 className="card-title mb-0">Nueva Categoría</h5>
+        <h5 className="card-title mb-0">Agregar Nueva Categoría</h5>
       </div>
       <div className="card-body">
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="form-label fw-medium">Nombre de categoría</label>
+            <label htmlFor="categoryNameInput" className="form-label visually-hidden">Nombre de la Categoría</label>
             <div className="input-group">
               <input
                 type="text"
-                // INICIO - Mejora Visual de Errores (MEJORA DE DISEÑO)
-                className={`form-control ${error ? 'is-invalid' : ''}`} // Añade clase 'is-invalid' si hay un error
-                // FIN - Mejora Visual de Errores
-                placeholder="Ingrese el nombre de la categoría"
+                className={`form-control form-control-lg ${error ? 'is-invalid' : ''}`}
+                id="categoryNameInput"
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
-                  if (error) setError(''); // Limpia el error de validación al empezar a escribir
+                  setError(''); // Limpia el error al escribir
                 }}
-                disabled={isAdding}
-                aria-label="Nombre de categoría"
-                // INICIO - Accesibilidad (MEJORA DE DISEÑO)
-                aria-describedby={error ? 'name-error-feedback' : null} // Vincula el input al mensaje de error
-                // FIN - Accesibilidad
+                placeholder="Nombre de la categoría"
+                aria-label="Nombre de la categoría"
+                aria-describedby={error ? 'name-error-feedback' : null}
               />
-              <button 
+              <button
                 className="btn btn-primary"
                 type="submit"
-                disabled={isAdding || !name.trim()} // Deshabilita si está agregando o el nombre está vacío
+                disabled={isAdding || !name.trim()}
               >
                 {isAdding ? (
                   <>
-                    <span 
-                      className="spinner-border spinner-border-sm me-2" 
-                      role="status" 
+                    <span
+                      className="spinner-border spinner-border-sm me-2"
+                      role="status"
                       aria-hidden="true"
                     ></span>
                     Agregando...
@@ -79,14 +73,12 @@ const CategoryForm = () => {
                 )}
               </button>
             </div>
-            {/* INICIO - Mensaje de Error (MEJORA DE DISEÑO) */}
             {error && (
-              <div id="name-error-feedback" className="invalid-feedback d-block"> {/* d-block para mostrar siempre */}
+              <div id="name-error-feedback" className="invalid-feedback d-block">
                 <i className="bi bi-exclamation-circle me-2"></i>
                 {error}
               </div>
             )}
-            {/* FIN - Mensaje de Error */}
           </div>
         </form>
       </div>

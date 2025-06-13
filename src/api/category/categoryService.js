@@ -4,13 +4,14 @@ const API_BASE_URL = 'http://localhost:8080/api/v1/category';
 
 export const categoryService = {
   // Obtener categorías paginadas con opción de búsqueda
-  getCategoriesPaged: async (page = 0, size = 10, sort = 'dateCreated', direction = 'DESC', searchTerm = '') => {
+  // El parámetro searchTerm ahora se envía como 'name' para coincidir con el backend
+  getCategoriesPaged: async (page = 0, size = 10, sort = 'dateCreated', direction = 'DESC', name = '') => { // CAMBIADO: searchTerm a name
     try {
       const params = { page, size, sort, direction };
-      if (searchTerm) {
-        params.searchTerm = searchTerm; // <-- Añadido: Parámetro de búsqueda
+      if (name) { // CAMBIADO: searchTerm a name
+        params.name = name; // <-- CAMBIADO: Ahora envía 'name' para el backend
       }
-      const response = await axios.get(`${API_BASE_URL}/paged`, { // Cambiado a /paged
+      const response = await axios.get(`${API_BASE_URL}/paged`, {
         params: params
       });
       return response.data;
@@ -33,23 +34,23 @@ export const categoryService = {
 
   createCategory: async (categoryData) => {
     try {
-      const response = await axios.post(API_BASE_URL, categoryData);
+      const response = await axios.post(`${API_BASE_URL}`, categoryData);
       return response.data;
     } catch (error) {
       if (error.response?.status === 409) {
-        throw new Error('El nombre de categoría ya existe');
+        throw new Error('El nombre de la categoría ya existe.');
       }
       if (error.response?.status === 400) {
-        throw new Error('El nombre de categoría no debe estar vacío o es inválido');
+        throw new Error('El nombre de la categoría no debe estar vacío.');
       }
       console.error("Error creating category:", error);
       throw new Error('Error al crear la categoría');
     }
   },
 
-  updateCategory: async (categoryData) => {
+  updateCategory: async (id, name, state) => { // Mantener el nombre del parámetro de búsqueda consistente
     try {
-      const response = await axios.put(API_BASE_URL, categoryData);
+      const response = await axios.put(`${API_BASE_URL}`, { id, name, state });
       return response.data;
     } catch (error) {
       if (error.response?.status === 404) {
@@ -59,7 +60,7 @@ export const categoryService = {
         throw new Error('El nombre de la categoría ya existe en otra categoría');
       }
       if (error.response?.status === 400) {
-        throw new Error('Datos de solicitud inválidos');
+        throw new Error('El nombre de la categoría no debe estar vacío.');
       }
       console.error("Error updating category:", error);
       throw new Error('Error al actualizar la categoría');
@@ -81,17 +82,14 @@ export const categoryService = {
   toggleCategoryState: async (id) => {
     try {
       const response = await axios.patch(`${API_BASE_URL}/${id}/toggle-state`);
-      return response.data; // Asegurarse de devolver la respuesta
+      return response.data;
     } catch (error) {
       let message = 'Error al cambiar el estado';
-      
+
       if (error.response) {
-        // Extraer mensaje del backend si existe
         message = error.response.data?.message || message;
-        
-        // Mensajes específicos por código de estado
+
         if (error.response.status === 404) message = 'Categoría no encontrada';
-        if (error.response.status === 400) message = 'Solicitud inválida para cambiar estado';
       }
       console.error("Error toggling category state:", error);
       throw new Error(message);
