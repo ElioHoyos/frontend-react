@@ -3,15 +3,14 @@ import axios from 'axios';
 const API_BASE_URL = 'http://localhost:8080/api/v1/category';
 
 export const categoryService = {
-  // Obtener categorías paginadas con opción de búsqueda
-  // El parámetro searchTerm ahora se envía como 'name' para coincidir con el backend
-  getCategoriesPaged: async (page = 0, size = 10, sort = 'dateCreated', direction = 'DESC', name = '') => { // CAMBIADO: searchTerm a name
+  getCategoriesPaged: async (page = 0, size = 10, sort = 'dateCreated', direction = 'DESC', searchTerm = '') => {
     try {
       const params = { page, size, sort, direction };
-      if (name) { // CAMBIADO: searchTerm a name
-        params.name = name; // <-- CAMBIADO: Ahora envía 'name' para el backend
+      if (searchTerm) {
+        params.searchTerm = searchTerm; // Cambiado a 'searchTerm'
       }
-      const response = await axios.get(`${API_BASE_URL}/paged`, {
+      // Usar el endpoint correcto
+      const response = await axios.get(`${API_BASE_URL}/categoryView`, {
         params: params
       });
       return response.data;

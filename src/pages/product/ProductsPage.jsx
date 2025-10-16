@@ -1,4 +1,3 @@
-// src/pages/ProductsPage.jsx
 import React from 'react';
 
 const ProductsPage = () => {
