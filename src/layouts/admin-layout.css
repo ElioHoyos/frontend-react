@@ -1,0 +1,83 @@
+/* --- layout container --- */
+.al-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background: #f4f6f9;
+}
+
+/* --- sidebar --- */
+.al-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  padding: 12px;
+  background: #343a40;
+  color: #cfd8dc;
+  overflow-y: auto;
+  z-index: 1040; /* above content */
+}
+.al-brand {
+  display: flex; align-items: center;
+  color: #fff; font-weight: 600; font-size: 1.05rem; margin: 6px 6px 12px 6px;
+}
+.al-user { display: flex; align-items: center; gap: 10px; padding: 8px; margin: 6px 0 12px 0; border-radius: 8px; background: rgba(255,255,255,.04); }
+.al-avatar { width: 44px; height: 44px; border-radius: 50%; }
+.al-user-name { color: #fff; font-weight: 600; line-height: 1; }
+.al-user-status { font-size: .75rem; color: #9aa4ab; }
+
+.al-search input { background: #2f353a; color: #cfd8dc; border: none; }
+.al-search .input-group-text { background: #2f353a; color: #9aa4ab; border: none; }
+
+.al-menu { margin: 0; padding: 0; }
+.al-section { padding: 8px 10px; font-size: .72rem; letter-spacing: .08em; color: #9aa4ab; }
+
+.al-item { margin: 2px 0; }
+.al-link {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 12px; border-radius: 8px; color: #cfd8dc; text-decoration: none;
+}
+.al-link:hover { background: rgba(255,255,255,.08); color: #fff; }
+.al-item.active .al-link { background: #0d6efd; color: #fff; }
+
+.al-text { transition: opacity .2s; white-space: nowrap; }
+
+/* --- topbar + main --- */
+.al-main { flex: 1 1 auto; margin-left: 260px; min-width: 0; }
+.al-topbar { z-index: 1030; }
+.al-content { padding-top: 16px; }
+
+/* --- collapsed (desktop) --- */
+.al-collapsed .al-sidebar { width: 72px; }
+.al-collapsed .al-main { margin-left: 72px; }
+.al-collapsed .al-text,
+.al-collapsed .al-user div,
+.al-collapsed .al-search,
+.al-collapsed .al-section { display: none; }
+.al-collapsed .al-user { justify-content: center; }
+.al-collapsed .al-avatar { width: 36px; height: 36px; }
+
+/* --- mobile overlay --- */
+@media (max-width: 991.98px) {
+  .al-sidebar { transform: translateX(-100%); transition: transform .2s; }
+  .al-mobile-open .al-sidebar { transform: translateX(0); }
+  .al-main { margin-left: 0; }
+  .al-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1035;
+  }
+}
+
+/* src/layouts/admin-layout.css */
+.al-content.container-fluid { padding: 8px 12px; }   /* antes ~24px */
+.page-title{ margin: 0 0 12px; font-weight: 600; }
+.card { margin-bottom: 12px; }                       /* cards más juntas */
+
+/* src/layouts/admin-layout.css */
+.al-content.container-fluid { padding: 12px; }
+
+@media (max-width: 576px) {
+  .al-content.container-fluid { padding: 6px; }
+  .card .card-header { padding: .5rem .75rem; }
+  .card .card-body { padding: .75rem; }
+}

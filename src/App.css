@@ -61,3 +61,14 @@ body {
 .btn-group .btn {
   margin-right: 5px;
 }
+
+/* widgets look */
+.card .card-header h5 { font-weight: 600; }
+.table-sm td, .table-sm th { padding-top: .55rem; padding-bottom: .55rem; }
+
+.card-header h5 { font-weight: 600; }
+.progress { background-color: rgba(0,0,0,.06); }
+
+/* compactar sólo en esta página si usas la clase .page-title arriba */
+.page-title + .mb-3 .card .card-body { padding: .75rem; }
+.card .card-header { padding: .5rem .75rem; }

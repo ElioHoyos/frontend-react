@@ -51,24 +51,16 @@ const CategoryForm = () => {
                 aria-label="Nombre de la categoría"
                 aria-describedby={error ? 'name-error-feedback' : null}
               />
-              <button
-                className="btn btn-primary"
-                type="submit"
-                disabled={isAdding || !name.trim()}
-              >
+              <button className="btn btn-primary" type="submit" disabled={isAdding || !name.trim()}>
                 {isAdding ? (
                   <>
-                    <span
-                      className="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                    Agregando...
+                    <span className="spinner-border spinner-border-sm me-2" role="status" />
+                    <span className="d-none d-sm-inline">Agregando...</span>
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-plus-circle me-2"></i>
-                    Agregar
+                    <i className="bi bi-plus-circle me-2" />
+                    <span className="d-none d-sm-inline">Agregar</span>
                   </>
                 )}
               </button>
