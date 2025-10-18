@@ -72,3 +72,13 @@ body {
 /* compactar sólo en esta página si usas la clase .page-title arriba */
 .page-title + .mb-3 .card .card-body { padding: .75rem; }
 .card .card-header { padding: .5rem .75rem; }
+
+.offcanvas .card {
+  box-shadow: none !important;
+  border: 0 !important;
+}
+.offcanvas .card-header {
+  display: none !important;
+}
+
+.css-26l3qy-menu, .react-select__menu { z-index: 9999; }

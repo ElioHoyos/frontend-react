@@ -37,3 +37,8 @@ code {
 .swal2-x-mark-line-right {
   background-color: #dc3545 !important;
 }
+
+.rdt_TableRow { border-bottom: 1px solid #f1f3f5; }
+.rdt_TableRow:hover { background: rgba(13,110,253,.04) !important; }
+.badge { border-radius: 999px; font-weight: 600; }
+.fw-600 { font-weight: 600; }
