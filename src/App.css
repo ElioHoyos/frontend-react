@@ -82,3 +82,10 @@ body {
 }
 
 .css-26l3qy-menu, .react-select__menu { z-index: 9999; }
+
+.rdt_TableCell svg { max-width: 100%; height: auto; }
+
+.react-select__control--is-focused {
+  box-shadow: 0 0 0 .25rem rgba(25,135,84,.25) !important;
+  border-color: #198754 !important;
+}

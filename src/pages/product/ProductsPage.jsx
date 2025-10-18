@@ -5,6 +5,7 @@ import ArticleForm from '../../components/article/ArticleForm';
 import ArticleToolbar from '../../components/article/ArticleToolbar';
 import StatCard from '../../components/common/StatCard';
 import { FaBoxOpen, FaCheckCircle, FaExclamationTriangle, FaCalendarTimes } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
 
 function DashboardProducts() {
   const {
@@ -30,6 +31,34 @@ function DashboardProducts() {
 
     return { activos, bajoStock, porVencer };
   }, [items]);
+
+  const ProductsPage = () => {
+  const { searchTerm, setSearchTerm } = useArticleContext();
+
+  return (
+    <div>
+      {/* buscador superior (el que dejamos) */}
+      <div className="input-group mb-3">
+        <span className="input-group-text">🔍</span>
+        <input
+          className="form-control"
+          placeholder="Buscar por nombre o código…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <button className="btn btn-success">
+          <FaPlus className="me-2" />
+          Agregar producto
+        </button>
+      </div>
+
+      {/* tarjetas/resumen … */}
+
+      {/* listado SIN buscador interno */}
+      <ArticleList showSearch={false} />
+    </div>
+  );
+};
 
   const openDrawer = () => setShowOffcanvas(true);
   const closeDrawer = () => setShowOffcanvas(false);

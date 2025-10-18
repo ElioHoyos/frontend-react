@@ -16,6 +16,7 @@
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "react": "^19.1.0",
+    "react-barcode": "^1.6.1",
     "react-chartjs-2": "^5.3.0",
     "react-data-table-component": "^7.7.0",
     "react-dom": "^19.1.0",

@@ -1,11 +1,12 @@
 // src/components/article/ArticleList.jsx
 import React, { useMemo, useState, useEffect } from 'react';
 import dayjs from 'dayjs';
+import Barcode from 'react-barcode';
 import DataTable from 'react-data-table-component';
 import ArticleEditModal from './ArticleEditModal';
 import { useArticleContext } from '../../contexts/ArticleContext';
 import { showConfirmDialog } from '../../utils/alertHelper';
-import { FaTrash, FaEdit, FaToggleOn, FaToggleOff, FaSearch } from 'react-icons/fa';
+import { FaTrash, FaEdit, FaToggleOn, FaToggleOff } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
@@ -22,13 +23,13 @@ const fmtDate = (d) => (d ? dayjs(d).format('YYYY-MM-DD') : '—');
 const money = (n) => `S/ ${Number(n ?? 0).toFixed(2)}`;
 
 // Debounce simple
-const useDebounce = (val, delay=500) => {
+const useDebounce = (val, delay = 500) => {
   const [v, setV] = useState(val);
   useEffect(() => { const t = setTimeout(() => setV(val), delay); return () => clearTimeout(t); }, [val, delay]);
   return v;
 };
 
-const ArticleList = () => {
+const ArticleList = ({ showSearch = false }) => {
   const {
     items, loading, error,
     currentPage, pageSize, totalPages, totalElements,
@@ -62,92 +63,122 @@ const ArticleList = () => {
 
   // columnas completas
   const allColumns = useMemo(() => ([
-  { name: 'Código', selector: r => r.code, sortable: true, sortField: 'code', width: '130px', wrap: true },
+    {
+      name: 'Código',
+      sortable: true,
+      sortField: 'code',
+      width: '190px',
+      center: true,       // centra el contenido en la celda
+      cell: (r) => {
+        const code = String(r.code ?? '');
+        const isEan13 = /^\d{13}$/.test(code);
+        // Si es EAN-13 usa ese formato; si no, renderiza CODE128 para que igual se vea “escaneable”
+        const format = isEan13 ? 'EAN13' : 'CODE128';
 
-  {
-    name: 'Nombre',
-    sortable: true,
-    sortField: 'name',
-    grow: 2,
-    wrap: true,
-    cell: r => (
-      <div title={`Creado: ${fmtDate(r.date_created ?? r.dateCreated)} | Modificado: ${fmtDate(r.date_modified ?? r.dateModified)}`}>
-        <div className="fw-600">{r.name}</div>
-        {!!r.description && <small className="text-muted">{r.description}</small>}
-      </div>
-    )
-  },
+        if (!code) return <span className="text-muted">—</span>;
 
-  { name: 'Categoría', selector: r => r.category_name ?? r.categoryName, sortable: true, sortField: 'categoryName', width: '140px', wrap: true },
+        return (
+          <div className="text-center">
+            <Barcode
+              value={code}
+              format={format}
+              displayValue={false}     // el número lo mostramos abajo como texto
+              height={32}              // alto de barras
+              margin={0}
+              lineColor="#1a1a1a"
+              background="transparent"
+              svgStyle={{ width: '160px', height: '40px' }}  // tamaño fijo del SVG
+            />
+            <small className="text-muted d-block mt-1">{code}</small>
+          </div>
+        );
+      }
+    },
 
-  { name: 'Cant.', selector: r => r.amount, sortable: true, sortField: 'amount', width: '90px', right: true },
+    {
+      name: 'Nombre',
+      sortable: true,
+      sortField: 'name',
+      grow: 2,
+      wrap: true,
+      cell: r => (
+        <div title={`Creado: ${fmtDate(r.date_created ?? r.dateCreated)} | Modificado: ${fmtDate(r.date_modified ?? r.dateModified)}`}>
+          <div className="fw-600">{r.name}</div>
+          {!!r.description && <small className="text-muted">{r.description}</small>}
+        </div>
+      )
+    },
 
-  {
-    name: 'Compra',
-    selector: r => (r.purchase_price ?? r.purchasePrice ?? 0),
-    sortable: true,
-    sortField: 'purchasePrice',
-    width: '110px',
-    right: true,
-    cell: r => money(r.purchase_price ?? r.purchasePrice)
-  },
+    { name: 'Categoría', selector: r => r.category_name ?? r.categoryName, sortable: true, sortField: 'categoryName', width: '140px', wrap: true },
 
-  {
-    name: 'Venta',
-    selector: r => (r.sale_price ?? r.salePrice ?? 0),
-    sortable: true,
-    sortField: 'salePrice',
-    width: '110px',
-    right: true,
-    cell: r => money(r.sale_price ?? r.salePrice)
-  },
+    { name: 'Cant.', selector: r => r.amount, sortable: true, sortField: 'amount', width: '90px', right: true },
 
-  {
-    name: 'Vence',
-    selector: r => r.expiration_date ?? r.expirationDate ?? '',
-    sortable: true,
-    sortField: 'expirationDate',
-    width: '120px',
-    cell: r => {
-      const d = r.expiration_date ?? r.expirationDate;
-      const past = d && dayjs(d).isBefore(dayjs(), 'day');
-      const soon = d && !past && dayjs(d).isBefore(dayjs().add(30, 'day'));
-      const cls = past ? 'bg-danger'
-                 : soon ? 'bg-warning text-dark'
-                 : 'bg-secondary';
-      return <span className={`badge ${cls}`}>{fmtDate(d)}</span>;
-    }
-  },
+    {
+      name: 'Compra',
+      selector: r => (r.purchase_price ?? r.purchasePrice ?? 0),
+      sortable: true,
+      sortField: 'purchasePrice',
+      width: '110px',
+      right: true,
+      cell: r => money(r.purchase_price ?? r.purchasePrice)
+    },
 
-  {
-    name: 'Estado',
-    selector: r => r.state,
-    sortable: true,
-    sortField: 'state',
-    width: '110px',
-    cell: r => <span className={`badge px-3 ${r.state ? 'bg-success' : 'bg-danger'}`}>{r.state ? 'Activo' : 'Inactivo'}</span>
-  },
+    {
+      name: 'Venta',
+      selector: r => (r.sale_price ?? r.salePrice ?? 0),
+      sortable: true,
+      sortField: 'salePrice',
+      width: '110px',
+      right: true,
+      cell: r => money(r.sale_price ?? r.salePrice)
+    },
 
-  {
-    name: 'Acciones',
-    button: true,
-    width: '170px',
-    cell: r => (
-      <div className="d-flex gap-2">
-        <button className="btn btn-sm btn-info text-white" title="Editar" onClick={() => setEditingArticle(r)}><FaEdit /></button>
-        <button className={`btn btn-sm ${r.state ? 'btn-warning' : 'btn-success'}`} title={r.state ? 'Desactivar' : 'Activar'} onClick={() => onToggle(r)}>
-          {r.state ? <FaToggleOn /> : <FaToggleOff />}
-        </button>
-        <button className="btn btn-sm btn-danger" title="Eliminar" onClick={() => onDelete(r)}><FaTrash /></button>
-      </div>
-    ),
-  },
-]), [setEditingArticle]);
+    {
+      name: 'Vence',
+      selector: r => r.expiration_date ?? r.expirationDate ?? '',
+      sortable: true,
+      sortField: 'expirationDate',
+      width: '120px',
+      cell: r => {
+        const d = r.expiration_date ?? r.expirationDate;
+        const past = d && dayjs(d).isBefore(dayjs(), 'day');
+        const soon = d && !past && dayjs(d).isBefore(dayjs().add(30, 'day'));
+        const cls = past ? 'bg-danger'
+          : soon ? 'bg-warning text-dark'
+            : 'bg-secondary';
+        return <span className={`badge ${cls}`}>{fmtDate(d)}</span>;
+      }
+    },
+
+    {
+      name: 'Estado',
+      selector: r => r.state,
+      sortable: true,
+      sortField: 'state',
+      width: '110px',
+      cell: r => <span className={`badge px-3 ${r.state ? 'bg-success' : 'bg-danger'}`}>{r.state ? 'Activo' : 'Inactivo'}</span>
+    },
+
+    {
+      name: 'Acciones',
+      button: true,
+      width: '170px',
+      cell: r => (
+        <div className="d-flex gap-2">
+          <button className="btn btn-sm btn-info text-white" title="Editar" onClick={() => setEditingArticle(r)}><FaEdit /></button>
+          <button className={`btn btn-sm ${r.state ? 'btn-warning' : 'btn-success'}`} title={r.state ? 'Desactivar' : 'Activar'} onClick={() => onToggle(r)}>
+            {r.state ? <FaToggleOn /> : <FaToggleOff />}
+          </button>
+          <button className="btn btn-sm btn-danger" title="Eliminar" onClick={() => onDelete(r)}><FaTrash /></button>
+        </div>
+      ),
+    },
+  ]), [setEditingArticle]);
 
   const columns = useMemo(() => {
     if (!isXs) return allColumns;
     // en XS mostramos lo esencial
-    return allColumns.filter(c => ['Código','Nombre','Estado'].includes(c.name));
+    return allColumns.filter(c => ['Código', 'Nombre', 'Estado'].includes(c.name));
   }, [isXs, allColumns]);
 
   const Expand = ({ data }) => (
@@ -186,16 +217,16 @@ const ArticleList = () => {
 
   /* EXPORT */
   const exportCSV = () => {
-    const header = ['Código','Nombre','Categoría','Cantidad','Compra','Venta','Vence','Estado','Creado','Modificado'];
+    const header = ['Código', 'Nombre', 'Categoría', 'Cantidad', 'Compra', 'Venta', 'Vence', 'Estado', 'Creado', 'Modificado'];
     const body = items.map(r => [
       r.code ?? '',
-      `"${(r.name||'').replace(/"/g,'""')}"`,
+      `"${(r.name || '').replace(/"/g, '""')}"`,
       r.category_name ?? r.categoryName ?? '',
       r.amount ?? 0,
       r.purchase_price ?? r.purchasePrice ?? 0,
       r.sale_price ?? r.salePrice ?? 0,
       r.expiration_date ?? r.expirationDate ?? '',
-      r.state ? 'Activo':'Inactivo',
+      r.state ? 'Activo' : 'Inactivo',
       r.date_created ?? r.dateCreated ?? '',
       r.date_modified ?? r.dateModified ?? '',
     ].join(','));
@@ -211,7 +242,7 @@ const ArticleList = () => {
       Compra: r.purchase_price ?? r.purchasePrice ?? 0,
       Venta: r.sale_price ?? r.salePrice ?? 0,
       Vence: r.expiration_date ?? r.expirationDate ?? '',
-      Estado: r.state ? 'Activo':'Inactivo',
+      Estado: r.state ? 'Activo' : 'Inactivo',
       Creado: r.date_created ?? r.dateCreated ?? '',
       Modificado: r.date_modified ?? r.dateModified ?? ''
     }));
@@ -223,24 +254,24 @@ const ArticleList = () => {
   };
 
   const conditionalRowStyles = [
-  {
-    when: r => Number(r.amount) <= 5,                 // bajo stock
-    style: { backgroundColor: 'rgba(255,193,7,.12)' }
-  },
-  {
-    when: r => {
-      const d = r.expiration_date ?? r.expirationDate;
-      return d && dayjs(d).isBefore(dayjs(), 'day');   // vencido
+    {
+      when: r => Number(r.amount) <= 5,                 // bajo stock
+      style: { backgroundColor: 'rgba(255,193,7,.12)' }
     },
-    style: { backgroundColor: 'rgba(220,53,69,.10)' }
-  }
-];
+    {
+      when: r => {
+        const d = r.expiration_date ?? r.expirationDate;
+        return d && dayjs(d).isBefore(dayjs(), 'day');   // vencido
+      },
+      style: { backgroundColor: 'rgba(220,53,69,.10)' }
+    }
+  ];
 
   const exportPDF = () => {
-    const doc = new jsPDF('l','pt','a4');
+    const doc = new jsPDF('l', 'pt', 'a4');
     doc.setFontSize(14);
     doc.text('Listado de Artículos', 40, 40);
-    const head = [['Código','Nombre','Categoría','Cantidad','Compra','Venta','Vence','Estado','Creado','Modificado']];
+    const head = [['Código', 'Nombre', 'Categoría', 'Cantidad', 'Compra', 'Venta', 'Vence', 'Estado', 'Creado', 'Modificado']];
     const body = items.map(r => [
       r.code ?? '',
       r.name ?? '',
@@ -249,11 +280,11 @@ const ArticleList = () => {
       r.purchase_price ?? r.purchasePrice ?? 0,
       r.sale_price ?? r.salePrice ?? 0,
       r.expiration_date ?? r.expirationDate ?? '',
-      r.state ? 'Activo':'Inactivo',
+      r.state ? 'Activo' : 'Inactivo',
       r.date_created ?? r.dateCreated ?? '',
       r.date_modified ?? r.dateModified ?? ''
     ]);
-    autoTable(doc, { head, body, startY: 60, headStyles: { fillColor: [33,37,41] }, styles: { fontSize: 9 } });
+    autoTable(doc, { head, body, startY: 60, headStyles: { fillColor: [33, 37, 41] }, styles: { fontSize: 9 } });
     doc.save('articulos.pdf');
   };
 
@@ -276,7 +307,7 @@ const ArticleList = () => {
       </div>
 
       {/* Buscador */}
-      <div className="px-3 pt-3">
+      {/* <div className="px-3 pt-3">
         <div className="input-group w-100 w-lg-50 mb-2">
           <span className="input-group-text"><FaSearch /></span>
           <input
@@ -286,7 +317,13 @@ const ArticleList = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-      </div>
+      </div> */}
+
+      {showSearch && (
+        <div className="px-3 pt-3">
+          {/* si algún día quisieras volver a mostrarlo desde acá */}
+        </div>
+      )}
 
       <div className="card-body p-2">
         {error ? (
@@ -294,31 +331,31 @@ const ArticleList = () => {
         ) : (
           <DataTable
             columns={columns}
-  data={items}
-  progressPending={loading}
-  dense
-  highlightOnHover
-  striped
-  customStyles={customStyles}
-  conditionalRowStyles={conditionalRowStyles}
-  responsive
-  wrap
-  fixedHeader={!isXs}
-  fixedHeaderScrollHeight={!isXs ? '60vh' : undefined}
-  expandableRows={isXs}
-  expandableRowsComponent={({ data }) => Expand({ data })}
-  pagination
-  paginationServer
-  paginationPerPage={pageSize}
-  paginationTotalRows={totalElements}
-  paginationDefaultPage={currentPage + 1}
-  onChangePage={(p) => setCurrentPage(p - 1)}
-  onChangeRowsPerPage={(n) => { setPageSize(n); setCurrentPage(0); }}
-  sortServer
-  onSort={handleSort}
-  defaultSortFieldId={columns.findIndex(c => c.sortField === sortField) + 1}
-  defaultSortAsc={sortDirection !== 'DESC'}
-  noDataComponent={<div className="text-muted py-4">No hay productos.</div>}
+            data={items}
+            progressPending={loading}
+            dense
+            highlightOnHover
+            striped
+            customStyles={customStyles}
+            conditionalRowStyles={conditionalRowStyles}
+            responsive
+            wrap
+            fixedHeader={!isXs}
+            fixedHeaderScrollHeight={!isXs ? '60vh' : undefined}
+            expandableRows={isXs}
+            expandableRowsComponent={({ data }) => Expand({ data })}
+            pagination
+            paginationServer
+            paginationPerPage={pageSize}
+            paginationTotalRows={totalElements}
+            paginationDefaultPage={currentPage + 1}
+            onChangePage={(p) => setCurrentPage(p - 1)}
+            onChangeRowsPerPage={(n) => { setPageSize(n); setCurrentPage(0); }}
+            sortServer
+            onSort={handleSort}
+            defaultSortFieldId={columns.findIndex(c => c.sortField === sortField) + 1}
+            defaultSortAsc={sortDirection !== 'DESC'}
+            noDataComponent={<div className="text-muted py-4">No hay productos.</div>}
           />
         )}
       </div>
@@ -326,9 +363,9 @@ const ArticleList = () => {
       {/* Modal editar */}
       {editingArticle && (
         <ArticleEditModal
-    article={editingArticle}
-    onClose={() => setEditingArticle(null)}
-  />
+          article={editingArticle}
+          onClose={() => setEditingArticle(null)}
+        />
       )}
     </div>
   );

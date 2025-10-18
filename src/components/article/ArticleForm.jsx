@@ -16,7 +16,6 @@ const ean13CheckDigit = (base12) => {
 };
 
 const generateEan13Preview = () => {
-  // base de 12 dígitos usando timestamp + aleatorio
   const base12 = (Date.now().toString() + Math.floor(Math.random() * 1e6).toString()).slice(0, 12);
   return base12 + ean13CheckDigit(base12);
 };
@@ -56,14 +55,12 @@ const ArticleForm = ({ onClose }) => {
         if (!ignore) {
           setCatOptions(all.map(c => ({ value: c.id, label: c.name })));
         }
-      } catch (e) {
-        // en caso de error, deja el select vacío
-      }
+      } catch (e) {}
     })();
     return () => { ignore = true; };
   }, []);
 
-  // cada vez que abras el modal, muestro un código nuevo de preview
+  // al montar, muestro un código nuevo de preview
   useEffect(() => {
     setClientCode(generateEan13Preview());
   }, []);
@@ -74,6 +71,18 @@ const ArticleForm = ({ onClose }) => {
   );
 
   const handleRegenerate = () => setClientCode(generateEan13Preview());
+
+  /* === NUEVO: función para resetear el formulario === */
+  const resetForm = () => {
+    setCategoryId(null);
+    setName('');
+    setDesc('');
+    setAmount(0);
+    setPurchase(0);
+    setSale(0);
+    setExpire('');
+    setClientCode(generateEan13Preview());
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,11 +96,19 @@ const ArticleForm = ({ onClose }) => {
       sale_price: Number(sale) || 0,
       purchase_price: Number(purchase) || 0,
       expiration_date: expire || null,
-      // code: undefined  // <-- no enviar
     };
 
     const ok = await addArticle(payload);
-    if (ok && onClose) onClose();
+    if (ok) {
+      resetForm();        // <-- limpia el formulario
+      onClose?.();        // <-- cierra el modal
+    }
+  };
+
+  /* === NUEVO: cancelar también limpia === */
+  const handleCancel = () => {
+    resetForm();
+    onClose?.();
   };
 
   return (
@@ -225,7 +242,7 @@ const ArticleForm = ({ onClose }) => {
             <button
               type="button"
               className="btn btn-outline-secondary"
-              onClick={onClose}
+              onClick={handleCancel}     // <-- ahora limpia y cierra
               disabled={isSaving}
             >
               Cancelar
