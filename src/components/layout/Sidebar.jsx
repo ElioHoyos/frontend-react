@@ -42,6 +42,7 @@ const Sidebar = ({ onNavigate }) => {
         <Item to="/" icon="bi-speedometer2">Dashboard</Item>
         <Item to="/categorias" icon="bi-tags-fill">Categorías</Item>
         <Item to="/productos" icon="bi-box-seam">Productos</Item>
+        <Item to="/clientes"  icon="bi-people-fill">Clientes</Item>
         <Item to="/ventas" icon="bi-cart-fill">Ventas</Item>
         <Item to="/reportes" icon="bi-graph-up">Reportes</Item>
 

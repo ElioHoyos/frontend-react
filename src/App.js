@@ -10,6 +10,7 @@ import ProductsPage from './pages/product/ProductsPage';
 import SalesPage from './pages/sales/SalesPage';
 import ReportsPage from './pages/reports/ReportsPage';
 import DashboardPage from './pages/dashboard/DashboardPage'; // tu dashboard actual
+import CustomersPage from './pages/customer/CustomersPage';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/categorias" element={<CategoriesPage />} />
             <Route path="/productos" element={<ProductsPage />} />
+            <Route path="/clientes"   element={<CustomersPage />} />
             <Route path="/ventas" element={<SalesPage />} />
             <Route path="/reportes" element={<ReportsPage />} />
           </Routes>
